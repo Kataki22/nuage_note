@@ -70,17 +70,25 @@ class NotesProvider extends ChangeNotifier {
     }
 
     // Tri
-    switch (_sortMode) {
-      case SortMode.dateDesc:
-        list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      case SortMode.dateAsc:
-        list.sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
-      case SortMode.titleAsc:
-        list.sort(
-          (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-        );
-      case SortMode.colorGroup:
-        list.sort((a, b) => b.noteColor.compareTo(a.noteColor));
+    if (_sortMode == SortMode.colorGroup) {
+      list.sort((a, b) => b.noteColor.compareTo(a.noteColor));
+    } else {
+      list.sort((a, b) {
+        // Pinned notes always first
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+
+        switch (_sortMode) {
+          case SortMode.dateDesc:
+            return b.updatedAt.compareTo(a.updatedAt);
+          case SortMode.dateAsc:
+            return a.updatedAt.compareTo(b.updatedAt);
+          case SortMode.titleAsc:
+            return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+          default:
+            return 0;
+        }
+      });
     }
 
     return list;
@@ -164,6 +172,16 @@ class NotesProvider extends ChangeNotifier {
     await _box!.put(
       id,
       note.copyWith(isArchived: !note.isArchived, updatedAt: DateTime.now()),
+    );
+    notifyListeners();
+  }
+
+  Future<void> togglePinned(String id) async {
+    final note = _box!.get(id);
+    if (note == null) return;
+    await _box!.put(
+      id,
+      note.copyWith(isPinned: !note.isPinned, updatedAt: DateTime.now()),
     );
     notifyListeners();
   }

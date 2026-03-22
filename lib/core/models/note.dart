@@ -40,6 +40,9 @@ class Note extends HiveObject {
   @HiveField(11)
   String? drawingPath;
 
+  @HiveField(12, defaultValue: false)
+  bool isPinned;
+
   Note({
     required this.id,
     required this.title,
@@ -50,6 +53,7 @@ class Note extends HiveObject {
     this.noteColor = 0,
     this.isFavorite = false,
     this.isArchived = false,
+    this.isPinned = false,
     this.folderId,
     this.audioPath,
     this.drawingPath,
@@ -65,6 +69,7 @@ class Note extends HiveObject {
     int? noteColor,
     bool? isFavorite,
     bool? isArchived,
+    bool? isPinned,
     String? folderId,
     String? audioPath,
     String? drawingPath,
@@ -79,6 +84,7 @@ class Note extends HiveObject {
       noteColor: noteColor ?? this.noteColor,
       isFavorite: isFavorite ?? this.isFavorite,
       isArchived: isArchived ?? this.isArchived,
+      isPinned: isPinned ?? this.isPinned,
       folderId: folderId ?? this.folderId,
       audioPath: audioPath ?? this.audioPath,
       drawingPath: drawingPath ?? this.drawingPath,

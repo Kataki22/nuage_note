@@ -40,6 +40,7 @@ class _NoteScreenState extends State<NoteScreen>
   List<String> _tags = [];
   bool _isFavorite = false;
   bool _isArchived = false;
+  bool _isPinned = false;
   String? _audioPath;
   String? _drawingPath;
   String? _folderId;
@@ -81,6 +82,7 @@ class _NoteScreenState extends State<NoteScreen>
       _tags = List.from(widget.note!.tags);
       _isFavorite = widget.note!.isFavorite;
       _isArchived = widget.note!.isArchived;
+      _isPinned = widget.note!.isPinned;
       _audioPath = widget.note!.audioPath;
       _drawingPath = widget.note!.drawingPath;
       _folderId = widget.note!.folderId;
@@ -120,6 +122,7 @@ class _NoteScreenState extends State<NoteScreen>
         noteColor: _noteColor,
         isFavorite: _isFavorite,
         isArchived: _isArchived,
+        isPinned: _isPinned,
         audioPath: _audioPath,
         drawingPath: _drawingPath,
         folderId: _folderId,
@@ -136,6 +139,7 @@ class _NoteScreenState extends State<NoteScreen>
         noteColor: _noteColor,
         isFavorite: _isFavorite,
         isArchived: _isArchived,
+        isPinned: _isPinned,
         audioPath: _audioPath,
         drawingPath: _drawingPath,
         folderId: _folderId,
@@ -167,173 +171,239 @@ class _NoteScreenState extends State<NoteScreen>
                 MediaQuery.of(context).padding.bottom +
                 20,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Couleur',
-                style: GoogleFonts.plusJakartaSans(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Sélecteur de couleur rapide
-              Wrap(
-                spacing: 12,
-                children: [
-                  GestureDetector(
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white24,
-                      radius: 20,
-                      child: _noteColor == 0
-                          ? const Icon(Icons.check, color: Colors.white)
-                          : null,
-                    ),
-                    onTap: () {
-                      setState(() {
-                        _noteColor = 0;
-                      });
-                      setStateSheet(() {});
-                    },
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Couleur',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
-                  ..._cardGradients.map(
-                    (g) => GestureDetector(
+                ),
+                const SizedBox(height: 12),
+                // Sélecteur de couleur rapide
+                Wrap(
+                  spacing: 12,
+                  children: [
+                    GestureDetector(
                       child: CircleAvatar(
-                        backgroundColor: g[0],
+                        backgroundColor: Colors.white24,
                         radius: 20,
-                        child: _noteColor == g[0].toARGB32()
+                        child: _noteColor == 0
                             ? const Icon(Icons.check, color: Colors.white)
                             : null,
                       ),
                       onTap: () {
                         setState(() {
-                          _noteColor = g[0].toARGB32();
+                          _noteColor = 0;
                         });
                         setStateSheet(() {});
                       },
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ListTile(
-                leading: Icon(
-                  _isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: _isFavorite ? Colors.amber : Colors.white,
-                ),
-                title: Text('Favori', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  setState(() {
-                    _isFavorite = !_isFavorite;
-                  });
-                  setStateSheet(() {});
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  _isArchived ? Icons.archive_rounded : Icons.archive_outlined,
-                  color: Colors.white,
-                ),
-                title: Text('Archive', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  setState(() {
-                    _isArchived = !_isArchived;
-                  });
-                  setStateSheet(() {});
-                },
-              ),
-              const SizedBox(height: 10),
-              const Divider(color: Colors.white24),
-              const SizedBox(height: 10),
-              TagPicker(
-                initialTags: _tags,
-                onTagsChanged: (tags) {
-                  setState(() => _tags = tags);
-                  setStateSheet(() {});
-                },
-              ),
-              const SizedBox(height: 20),
-              AudioRecorderWidget(
-                initialAudioPath: _audioPath,
-                onAudioSaved: (path) {
-                  setState(() => _audioPath = path);
-                  setStateSheet(() {});
-                },
-              ),
-              const SizedBox(height: 10),
-              ListTile(
-                leading: Icon(
-                  _drawingPath != null
-                      ? Icons.brush_rounded
-                      : Icons.brush_outlined,
-                  color: Colors.white,
-                ),
-                title: Text(
-                  _drawingPath != null ? 'Modifier le dessin' : 'Dessin libre',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                tileColor: Colors.white.withValues(alpha: 0.05),
-                onTap: () async {
-                  final path = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const DrawingScreen()),
-                  );
-                  if (path != null && path is String) {
-                    setState(() => _drawingPath = path);
-                    setStateSheet(() {});
-                  }
-                },
-              ),
-              if (_drawingPath != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 10, left: 16, right: 16),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          color: Colors.white,
-                          child: Transform.scale(
-                            scale: 2.0,
-                            child: Image.file(
-                              File(_drawingPath!),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
+                    ..._cardGradients.map(
+                      (g) => GestureDetector(
+                        child: CircleAvatar(
+                          backgroundColor: g[0],
+                          radius: 20,
+                          child: _noteColor == g[0].toARGB32()
+                              ? const Icon(Icons.check, color: Colors.white)
+                              : null,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Dessin joint',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.white54,
-                        ),
-                        onPressed: () {
-                          setState(() => _drawingPath = null);
+                        onTap: () {
+                          setState(() {
+                            _noteColor = g[0].toARGB32();
+                          });
                           setStateSheet(() {});
                         },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              const SizedBox(height: 10),
-            ],
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: Icon(
+                    _isPinned
+                        ? Icons.push_pin_rounded
+                        : Icons.push_pin_outlined,
+                    color: Colors.white,
+                  ),
+                  title: const Text(
+                    'Épingler',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _isPinned = !_isPinned;
+                    });
+                    setStateSheet(() {});
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    _isFavorite
+                        ? Icons.star_rounded
+                        : Icons.star_outline_rounded,
+                    color: _isFavorite ? Colors.amber : Colors.white,
+                  ),
+                  title: const Text(
+                    'Favori',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _isFavorite = !_isFavorite;
+                    });
+                    setStateSheet(() {});
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    _isArchived
+                        ? Icons.archive_rounded
+                        : Icons.archive_outlined,
+                    color: Colors.white,
+                  ),
+                  title: const Text(
+                    'Archive',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _isArchived = !_isArchived;
+                    });
+                    setStateSheet(() {});
+                  },
+                ),
+                const SizedBox(height: 10),
+                const Divider(color: Colors.white24),
+                const SizedBox(height: 10),
+                TagPicker(
+                  initialTags: _tags,
+                  onTagsChanged: (tags) {
+                    setState(() => _tags = tags);
+                    setStateSheet(() {});
+                  },
+                ),
+                const SizedBox(height: 20),
+                AudioRecorderWidget(
+                  initialAudioPath: _audioPath,
+                  onAudioSaved: (path) {
+                    setState(() => _audioPath = path);
+                    setStateSheet(() {});
+                  },
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  leading: Icon(
+                    _drawingPath != null
+                        ? Icons.brush_rounded
+                        : Icons.brush_outlined,
+                    color: Colors.white,
+                  ),
+                  title: Text(
+                    _drawingPath != null
+                        ? 'Modifier le dessin'
+                        : 'Dessin libre',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  tileColor: Colors.white.withValues(alpha: 0.05),
+                  onTap: () async {
+                    final path = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DrawingScreen()),
+                    );
+                    if (path != null && path is String) {
+                      setState(() => _drawingPath = path);
+                      setStateSheet(() {});
+                    }
+                  },
+                ),
+                if (_drawingPath != null)
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      top: 10,
+                      left: 16,
+                      right: 16,
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            color: Colors.white,
+                            child: Transform.scale(
+                              scale: 2.0,
+                              child: Image.file(
+                                File(_drawingPath!),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'Dessin joint',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white54,
+                          ),
+                          onPressed: () {
+                            setState(() => _drawingPath = null);
+                            setStateSheet(() {});
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                if (isEditing) ...[
+                  const Divider(color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.redAccent,
+                    ),
+                    title: const Text(
+                      'Supprimer',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
+                    onTap: () async {
+                      Navigator.pop(context); // Close sheet
+                      final p = Provider.of<NotesProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final noteToDelete = widget.note!;
+
+                      // On ferme l'écran de la note avant de supprimer
+                      Navigator.pop(context);
+
+                      await p.deleteNote(noteToDelete.id);
+
+                      // On pourrait déclencher le snackbar ici si on avait accès au scaffold de l'accueil
+                      // Mais on va le faire dans home_screen.dart généralement.
+                    },
+                  ),
+                ],
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
         ),
       ),

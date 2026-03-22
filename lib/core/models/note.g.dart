@@ -26,6 +26,7 @@ class NoteAdapter extends TypeAdapter<Note> {
       noteColor: fields[6] == null ? 0 : fields[6] as int,
       isFavorite: fields[7] == null ? false : fields[7] as bool,
       isArchived: fields[8] == null ? false : fields[8] as bool,
+      isPinned: fields[12] == null ? false : fields[12] as bool,
       folderId: fields[9] as String?,
       audioPath: fields[10] as String?,
       drawingPath: fields[11] as String?,
@@ -35,7 +36,7 @@ class NoteAdapter extends TypeAdapter<Note> {
   @override
   void write(BinaryWriter writer, Note obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class NoteAdapter extends TypeAdapter<Note> {
       ..writeByte(10)
       ..write(obj.audioPath)
       ..writeByte(11)
-      ..write(obj.drawingPath);
+      ..write(obj.drawingPath)
+      ..writeByte(12)
+      ..write(obj.isPinned);
   }
 
   @override

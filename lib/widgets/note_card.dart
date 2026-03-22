@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../core/models/note.dart';
-import '../core/providers/note_provider.dart';
 
 const List<List<Color>> _cardGradients = [
   [Color(0xFF7C5CBF), Color(0xFF5B3FA0)],
@@ -57,8 +55,6 @@ class NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notesProvider = Provider.of<NotesProvider>(context, listen: false);
-
     // Couleur choisie ou fallback sur le gradient auto
     final hasCustomColor = note.noteColor != 0;
     final List<Color> gradient = hasCustomColor
@@ -67,6 +63,7 @@ class NoteCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onDelete,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -88,14 +85,22 @@ class NoteCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ─── Header : badges + bouton delete ───────────────
+              // ─── Header : badges ──────────────────────────────
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Wrap(
-                      spacing: 4,
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
+                        if (note.isPinned)
+                          const Icon(
+                            Icons.push_pin_rounded,
+                            size: 16,
+                            color: Colors.white,
+                          ),
                         if (note.isFavorite)
                           const Icon(
                             Icons.star_rounded,
@@ -116,36 +121,14 @@ class NoteCard extends StatelessWidget {
                           ),
                         Text(
                           note.title.isEmpty ? 'Sans titre' : note.title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
-                            height: 1.3,
+                            height: 1.2,
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      notesProvider.toggleFavorite(note.id);
-                    },
-                    child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        note.isFavorite
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        size: 16,
-                        color: note.isFavorite ? Colors.amber : Colors.white70,
-                      ),
                     ),
                   ),
                 ],

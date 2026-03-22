@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../core/providers/note_provider.dart';
 import '../core/providers/tag_provider.dart';
+import '../core/models/note.dart';
 import '../widgets/note_card.dart';
 import 'note_screen.dart';
 import 'folder_screen.dart';
@@ -172,10 +173,8 @@ class HomeScreen extends StatelessWidget {
                           context,
                           _slideRoute(NoteScreen(note: note)),
                         ),
-                        onDelete: () => _confirmDelete(
-                          context,
-                          () => notesProvider.deleteNote(note.id),
-                        ),
+                        onDelete: () =>
+                            _showNoteOptions(context, note, notesProvider),
                       );
                     }, childCount: notesProvider.notes.length),
                     gridDelegate:
@@ -304,7 +303,96 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, VoidCallback onConfirm) {
+  void _showNoteOptions(
+    BuildContext context,
+    Note note,
+    NotesProvider notesProvider,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1D2A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(
+                note.isPinned
+                    ? Icons.push_pin_rounded
+                    : Icons.push_pin_outlined,
+                color: Colors.white,
+              ),
+              title: Text(
+                note.isPinned ? 'Désépingler' : 'Épingler',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                notesProvider.togglePinned(note.id);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                note.isFavorite
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+                color: note.isFavorite ? Colors.amber : Colors.white,
+              ),
+              title: Text(
+                note.isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                notesProvider.toggleFavorite(note.id);
+              },
+            ),
+            ListTile(
+              leading: Icon(
+                note.isArchived
+                    ? Icons.unarchive_rounded
+                    : Icons.archive_rounded,
+                color: Colors.white,
+              ),
+              title: Text(
+                note.isArchived ? 'Désarchiver' : 'Archiver',
+                style: const TextStyle(color: Colors.white),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                notesProvider.toggleArchive(note.id);
+              },
+            ),
+            const Divider(color: Colors.white12),
+            ListTile(
+              leading: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.redAccent,
+              ),
+              title: const Text(
+                'Supprimer',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+              onTap: () {
+                Navigator.pop(context); // Close sheet
+                _confirmDelete(context, note, notesProvider);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    Note note,
+    NotesProvider notesProvider,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E1D2A),
@@ -345,9 +433,29 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.pop(context);
-                      onConfirm();
+
+                      final noteCopy = note
+                          .copyWith(); // Create a copy for undo
+                      await notesProvider.deleteNote(note.id);
+
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Note supprimée'),
+                          backgroundColor: const Color(0xFF1E1D2A),
+                          behavior: SnackBarBehavior.floating,
+                          action: SnackBarAction(
+                            label: 'ANNULER',
+                            textColor: Colors.blueAccent,
+                            onPressed: () async {
+                              await notesProvider.addNote(noteCopy);
+                            },
+                          ),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
