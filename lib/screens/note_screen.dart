@@ -512,34 +512,52 @@ class _NoteScreenState extends State<NoteScreen>
 
                 const SizedBox(height: 8),
 
-                // Éditeur Quill + aperçu des médias en bas de la zone de texte
+                // Éditeur Quill + aperçu des médias : scroll conjoint
                 Expanded(
                   child: Container(
                     color: const Color(0xFF12111A),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: DefaultTextStyle(
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                              child: quill.QuillEditor.basic(
-                                controller: _quillController,
-                              ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  child: DefaultTextStyle(
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                    child: quill.QuillEditor.basic(
+                                      controller: _quillController,
+                                      config: const quill.QuillEditorConfig(
+                                        scrollable: false,
+                                        expands: false,
+                                        minHeight: 220,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                NoteMediaPreview(
+                                  audioPath: _audioPath,
+                                  drawingPath: _drawingPath,
+                                  onDrawingTap: _openDrawingEditor,
+                                  onDrawingDelete: _deleteDrawingFile,
+                                  onAudioDelete: _deleteAudioFile,
+                                ),
+                                const SizedBox(height: 24),
+                              ],
                             ),
                           ),
-                        ),
-                        NoteMediaPreview(
-                          audioPath: _audioPath,
-                          drawingPath: _drawingPath,
-                          onDrawingTap: _openDrawingEditor,
-                          onDrawingDelete: _deleteDrawingFile,
-                          onAudioDelete: _deleteAudioFile,
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
                 ),
