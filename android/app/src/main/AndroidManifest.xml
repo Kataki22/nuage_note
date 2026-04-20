@@ -1,6 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Audio recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Image picker: modern photo picker (Android 13+) and legacy fallback -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
     <application
-        android:label="nuage note"
+        android:label="Nuage Note"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

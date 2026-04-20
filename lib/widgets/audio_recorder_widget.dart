@@ -28,7 +28,6 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
   bool _isPlaying = false;
   String? _audioPath;
 
-  // Durées
   Timer? _recordTimer;
   int _recordDuration = 0;
   Duration _totalDuration = Duration.zero;
@@ -72,65 +71,100 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.redAccent.shade700,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   Future<void> _startRecording() async {
     try {
-      if (await _audioRecorder.hasPermission()) {
-        final directory = await getApplicationDocumentsDirectory();
-        final path =
-            '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-        await _audioRecorder.start(const RecordConfig(), path: path);
-        setState(() {
-          _isRecording = true;
-          _audioPath = path;
-          _recordDuration = 0;
-        });
-        _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (mounted) {
-            setState(() => _recordDuration++);
-          }
-        });
+      final hasPermission = await _audioRecorder.hasPermission();
+      if (!hasPermission) {
+        _showError(
+          'Permission micro refusée. Autorisez-la dans les paramètres.',
+        );
+        return;
       }
+
+      final directory = await getApplicationDocumentsDirectory();
+      final path =
+          '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      await _audioRecorder.start(const RecordConfig(), path: path);
+
+      if (!mounted) return;
+      setState(() {
+        _isRecording = true;
+        _audioPath = path;
+        _recordDuration = 0;
+      });
+      _recordTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (mounted) {
+          setState(() => _recordDuration++);
+        }
+      });
     } catch (e) {
-      // Ignorer ou afficher une erreur
+      _showError('Impossible de démarrer l\'enregistrement.');
     }
   }
 
   Future<void> _stopRecording() async {
     _recordTimer?.cancel();
-    final path = await _audioRecorder.stop();
-    setState(() {
-      _isRecording = false;
-      if (path != null) {
-        _audioPath = path;
-        widget.onAudioSaved(path);
-        _audioPlayer.setSourceDeviceFile(path);
-      }
-    });
+    try {
+      final path = await _audioRecorder.stop();
+      if (!mounted) return;
+      setState(() {
+        _isRecording = false;
+        if (path != null) {
+          _audioPath = path;
+          widget.onAudioSaved(path);
+          _audioPlayer.setSourceDeviceFile(path);
+        }
+      });
+    } catch (e) {
+      if (mounted) setState(() => _isRecording = false);
+      _showError('Erreur lors de l\'arrêt de l\'enregistrement.');
+    }
   }
 
   Future<void> _deleteRecording() async {
     if (_audioPath != null) {
-      final file = File(_audioPath!);
-      if (await file.exists()) {
-        await file.delete();
+      try {
+        final file = File(_audioPath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (_) {
+        // Le fichier a peut-être déjà disparu — on continue le nettoyage UI
       }
     }
+    await _audioPlayer.stop();
+    if (!mounted) return;
     setState(() {
       _audioPath = null;
       _totalDuration = Duration.zero;
       _currentPosition = Duration.zero;
       _recordDuration = 0;
-      widget.onAudioSaved(null);
     });
+    widget.onAudioSaved(null);
   }
 
   Future<void> _togglePlay() async {
     if (_audioPath == null) return;
-
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-    } else {
-      await _audioPlayer.resume();
+    try {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+      } else {
+        await _audioPlayer.resume();
+      }
+    } catch (e) {
+      _showError('Lecture impossible.');
     }
   }
 
@@ -147,7 +181,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Audio Recorder',
+          'Note vocale',
           style: GoogleFonts.plusJakartaSans(
             color: Colors.white,
             fontSize: 16,
@@ -188,16 +222,6 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
                         : FontWeight.normal,
                   ),
                 ),
-                if (_audioPath != null && !_isRecording) ...[
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.white54,
-                    ),
-                    onPressed: _deleteRecording,
-                  ),
-                ],
               ] else ...[
                 IconButton(
                   icon: Icon(

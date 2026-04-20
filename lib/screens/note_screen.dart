@@ -7,6 +7,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../core/models/note.dart';
 import '../widgets/tag_picker.dart';
 import '../widgets/audio_recorder_widget.dart';
+import '../widgets/note_media_preview.dart';
 import 'drawing_screen.dart';
 import '../core/providers/note_provider.dart';
 
@@ -100,6 +101,40 @@ class _NoteScreenState extends State<NoteScreen>
     _quillController.dispose();
     _saveAnim.dispose();
     super.dispose();
+  }
+
+  Future<void> _deleteDrawingFile() async {
+    final path = _drawingPath;
+    if (path == null) return;
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Fichier déjà supprimé ou inaccessible — on nettoie l'UI quand même
+    }
+    if (mounted) setState(() => _drawingPath = null);
+  }
+
+  Future<void> _deleteAudioFile() async {
+    final path = _audioPath;
+    if (path == null) return;
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Fichier déjà supprimé ou inaccessible — on nettoie l'UI quand même
+    }
+    if (mounted) setState(() => _audioPath = null);
+  }
+
+  Future<void> _openDrawingEditor() async {
+    final path = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DrawingScreen()),
+    );
+    if (path != null && path is String && mounted) {
+      setState(() => _drawingPath = path);
+    }
   }
 
   Future<void> _saveNote() async {
@@ -325,52 +360,6 @@ class _NoteScreenState extends State<NoteScreen>
                     }
                   },
                 ),
-                if (_drawingPath != null)
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      top: 10,
-                      left: 16,
-                      right: 16,
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            color: Colors.white,
-                            child: Transform.scale(
-                              scale: 2.0,
-                              child: Image.file(
-                                File(_drawingPath!),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Dessin joint',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Spacer(),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.white54,
-                          ),
-                          onPressed: () {
-                            setState(() => _drawingPath = null);
-                            setStateSheet(() {});
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
                 const SizedBox(height: 10),
                 if (isEditing) ...[
                   const Divider(color: Colors.white24),
@@ -523,16 +512,34 @@ class _NoteScreenState extends State<NoteScreen>
 
                 const SizedBox(height: 8),
 
-                // Éditeur Quill
+                // Éditeur Quill + aperçu des médias en bas de la zone de texte
                 Expanded(
                   child: Container(
                     color: const Color(0xFF12111A),
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: DefaultTextStyle(
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      child: quill.QuillEditor.basic(
-                        controller: _quillController,
-                      ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: DefaultTextStyle(
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                              child: quill.QuillEditor.basic(
+                                controller: _quillController,
+                              ),
+                            ),
+                          ),
+                        ),
+                        NoteMediaPreview(
+                          audioPath: _audioPath,
+                          drawingPath: _drawingPath,
+                          onDrawingTap: _openDrawingEditor,
+                          onDrawingDelete: _deleteDrawingFile,
+                          onAudioDelete: _deleteAudioFile,
+                        ),
+                      ],
                     ),
                   ),
                 ),
