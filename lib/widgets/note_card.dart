@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'dart:convert';
 import '../core/models/note.dart';
+import '../core/models/tag.dart';
+import '../core/providers/tag_provider.dart';
 
 const List<List<Color>> _cardGradients = [
   [Color(0xFF7C5CBF), Color(0xFF5B3FA0)],
@@ -119,6 +122,13 @@ class NoteCard extends StatelessWidget {
                             size: 16,
                             color: Colors.white,
                           ),
+                        if (note.reminderAt != null &&
+                            note.reminderAt!.isAfter(DateTime.now()))
+                          const Icon(
+                            Icons.notifications_active_rounded,
+                            size: 16,
+                            color: Colors.amberAccent,
+                          ),
                         Text(
                           note.title.isEmpty ? 'Sans titre' : note.title,
                           style: GoogleFonts.plusJakartaSans(
@@ -154,33 +164,65 @@ class NoteCard extends StatelessWidget {
 
               // ─── Tags ──────────────────────────────────────────
               if (note.tags.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
-                    children: note.tags.take(3).map((tId) {
-                      // Normalement il faut récupérer le nom du tag depuis le TagProvider
-                      // Ici on affiche juste l'ID ou un libellé par défaut si manquant
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'tag',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.8),
+                Builder(
+                  builder: (context) {
+                    final allTags = context.watch<TagProvider>().tags;
+                    final tagsById = {for (final t in allTags) t.id: t};
+                    final resolved = note.tags
+                        .map((id) => tagsById[id])
+                        .whereType<Tag>()
+                        .toList();
+                    if (resolved.isEmpty) return const SizedBox.shrink();
+                    final extra = resolved.length - 3;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          ...resolved.take(3).map(
+                            (tag) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Color(tag.color).withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '#${tag.name}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                          if (extra > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '+$extra',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
 
               // ─── Date ──────────────────────────────────────────

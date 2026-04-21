@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:scribble/scribble.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:scribble/scribble.dart';
 
 class DrawingScreen extends StatefulWidget {
   const DrawingScreen({super.key});
@@ -26,16 +28,37 @@ class _DrawingScreenState extends State<DrawingScreen> {
   }
 
   Future<void> _saveAndReturn() async {
-    final imageByteData = await notifier.renderImage();
+    final scribbleBytes = (await notifier.renderImage()).buffer.asUint8List();
+    final strokeImage = await decodeImageFromList(scribbleBytes);
 
-    final bytes = imageByteData.buffer.asUint8List();
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final width = strokeImage.width.toDouble();
+    final height = strokeImage.height.toDouble();
 
-    // Sauvegarder dans le stockage de l'app
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width, height),
+      Paint()..color = Colors.white,
+    );
+    canvas.drawImage(strokeImage, Offset.zero, Paint());
+
+    final composed = await recorder.endRecording().toImage(
+      strokeImage.width,
+      strokeImage.height,
+    );
+    final pngData = await composed.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
+    if (pngData == null) {
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+    final bytes = pngData.buffer.asUint8List();
+
     final directory = await getApplicationDocumentsDirectory();
     final fileName = 'drawing_${DateTime.now().millisecondsSinceEpoch}.png';
     final p = '${directory.path}/$fileName';
-    final file = File(p);
-    await file.writeAsBytes(bytes);
+    await File(p).writeAsBytes(bytes);
 
     if (mounted) {
       Navigator.pop(context, p);

@@ -5,11 +5,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../core/models/note.dart';
+import '../core/models/tag.dart';
+import '../core/services/note_share_service.dart';
+import '../core/services/notification_service.dart';
 import '../widgets/tag_picker.dart';
 import '../widgets/audio_recorder_widget.dart';
 import '../widgets/note_media_preview.dart';
 import 'drawing_screen.dart';
 import '../core/providers/note_provider.dart';
+import '../core/providers/tag_provider.dart';
 
 const List<List<Color>> _cardGradients = [
   [Color(0xFF7C5CBF), Color(0xFF5B3FA0)],
@@ -45,6 +49,7 @@ class _NoteScreenState extends State<NoteScreen>
   String? _audioPath;
   String? _drawingPath;
   String? _folderId;
+  DateTime? _reminderAt;
 
   bool get isEditing => widget.note != null;
   List<Color> get _gradient {
@@ -87,6 +92,7 @@ class _NoteScreenState extends State<NoteScreen>
       _audioPath = widget.note!.audioPath;
       _drawingPath = widget.note!.drawingPath;
       _folderId = widget.note!.folderId;
+      _reminderAt = widget.note!.reminderAt;
     }
 
     _saveAnim = AnimationController(
@@ -127,6 +133,176 @@ class _NoteScreenState extends State<NoteScreen>
     if (mounted) setState(() => _audioPath = null);
   }
 
+  Note _buildCurrentNote() {
+    final notesProvider = Provider.of<NotesProvider>(context, listen: false);
+    return Note(
+      id: widget.note?.id ?? notesProvider.generateId(),
+      title: _titleController.text,
+      content: jsonEncode(_quillController.document.toDelta().toJson()),
+      createdAt: widget.note?.createdAt ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+      tags: _tags,
+      noteColor: _noteColor,
+      isFavorite: _isFavorite,
+      isArchived: _isArchived,
+      isPinned: _isPinned,
+      audioPath: _audioPath,
+      drawingPath: _drawingPath,
+      folderId: _folderId,
+      reminderAt: _reminderAt,
+    );
+  }
+
+  List<Tag> _resolvedTags() {
+    final tagProvider = Provider.of<TagProvider>(context, listen: false);
+    final byId = {for (final t in tagProvider.tags) t.id: t};
+    return _tags.map((id) => byId[id]).whereType<Tag>().toList();
+  }
+
+  Future<void> _showShareSheet() async {
+    final hasText =
+        _titleController.text.trim().isNotEmpty ||
+        !_quillController.document.isEmpty();
+    final hasDrawing = _drawingPath != null;
+    final hasAudio = _audioPath != null;
+
+    if (!hasText && !hasDrawing && !hasAudio) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rien à partager.')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF1E1D2A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.share_rounded, color: Colors.white70),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Partager',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasText)
+                _shareTile(
+                  icon: Icons.short_text_rounded,
+                  label: 'Texte seul',
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _runShare(() => NoteShareService.shareTextOnly(
+                          _buildCurrentNote(),
+                          resolvedTags: _resolvedTags(),
+                        ));
+                  },
+                ),
+              if (hasDrawing)
+                _shareTile(
+                  icon: Icons.brush_rounded,
+                  label: 'Dessin uniquement',
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _runShare(() => NoteShareService.shareDrawingOnly(
+                          _buildCurrentNote(),
+                        ));
+                  },
+                ),
+              if (hasAudio)
+                _shareTile(
+                  icon: Icons.mic_rounded,
+                  label: 'Note vocale uniquement',
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _runShare(() => NoteShareService.shareAudioOnly(
+                          _buildCurrentNote(),
+                        ));
+                  },
+                ),
+              if ((hasDrawing || hasAudio) && hasText)
+                _shareTile(
+                  icon: Icons.collections_bookmark_rounded,
+                  label: 'Tout (texte + pièces jointes)',
+                  highlight: true,
+                  onTap: () {
+                    Navigator.pop(sheetCtx);
+                    _runShare(() => NoteShareService.shareAll(
+                          _buildCurrentNote(),
+                          resolvedTags: _resolvedTags(),
+                        ));
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _shareTile({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool highlight = false,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: highlight ? const Color(0xFF7C5CBF) : Colors.white,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _runShare(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Partage impossible.')),
+      );
+    }
+  }
+
+  Future<void> _copyNote() async {
+    await NoteShareService.copyToClipboard(
+      _buildCurrentNote(),
+      resolvedTags: _resolvedTags(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Note copiée dans le presse-papier'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _openDrawingEditor() async {
     final path = await Navigator.push(
       context,
@@ -134,6 +310,125 @@ class _NoteScreenState extends State<NoteScreen>
     );
     if (path != null && path is String && mounted) {
       setState(() => _drawingPath = path);
+    }
+  }
+
+  String _formatReminder(DateTime dt) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(dt.day)}/${two(dt.month)}/${dt.year} à ${two(dt.hour)}:${two(dt.minute)}';
+  }
+
+  Future<void> _pickReminder() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final initial = _reminderAt ?? now.add(const Duration(hours: 1));
+    final initialDate = initial.isBefore(today) ? today : initial;
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365 * 5)),
+    );
+    if (date == null || !mounted) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(initial),
+    );
+    if (time == null || !mounted) return;
+
+    final picked = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+
+    if (!picked.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choisissez un moment dans le futur.')),
+      );
+      return;
+    }
+
+    final granted = await NotificationService.instance.requestPermissions();
+    if (!mounted) return;
+    if (!granted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Permission notifications refusée. Active-la dans les paramètres.',
+          ),
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+    setState(() => _reminderAt = picked);
+  }
+
+  void _clearReminder() {
+    setState(() => _reminderAt = null);
+  }
+
+  String _reminderBodyPreview() {
+    try {
+      final doc = _quillController.document;
+      final text = doc.toPlainText().trim();
+      if (text.isEmpty) return 'Vous avez un rappel programmé.';
+      return text.length > 80 ? '${text.substring(0, 80)}…' : text;
+    } catch (_) {
+      return 'Vous avez un rappel programmé.';
+    }
+  }
+
+  Future<void> _syncReminder(String noteId, String title) async {
+    final service = NotificationService.instance;
+    final reminder = _reminderAt;
+    if (reminder != null && reminder.isAfter(DateTime.now())) {
+      final result = await service.schedule(
+        noteId: noteId,
+        title: title.trim().isEmpty ? 'Rappel de note' : title,
+        body: _reminderBodyPreview(),
+        when: reminder,
+      );
+      if (!mounted) return;
+      switch (result) {
+        case ReminderScheduleResult.scheduledExact:
+          break;
+        case ReminderScheduleResult.scheduledInexact:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Rappel programmé (mode approximatif — peut arriver avec un délai). '
+                'Active "Alarmes exactes" dans les paramètres pour plus de précision.',
+              ),
+              duration: Duration(seconds: 5),
+            ),
+          );
+          break;
+        case ReminderScheduleResult.notificationDenied:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Notifications désactivées — le rappel ne sera pas affiché.',
+              ),
+              duration: Duration(seconds: 4),
+            ),
+          );
+          break;
+        case ReminderScheduleResult.failed:
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Impossible de programmer le rappel.'),
+            ),
+          );
+          break;
+      }
+    } else {
+      await service.cancel(noteId);
     }
   }
 
@@ -147,6 +442,7 @@ class _NoteScreenState extends State<NoteScreen>
     }
 
     final notesProvider = Provider.of<NotesProvider>(context, listen: false);
+    String savedId;
 
     if (isEditing) {
       final updatedNote = widget.note!.copyWith(
@@ -161,8 +457,10 @@ class _NoteScreenState extends State<NoteScreen>
         audioPath: _audioPath,
         drawingPath: _drawingPath,
         folderId: _folderId,
+        reminderAt: _reminderAt,
       );
       await notesProvider.updateNote(updatedNote);
+      savedId = updatedNote.id;
     } else {
       final newNote = Note(
         id: notesProvider.generateId(),
@@ -178,9 +476,13 @@ class _NoteScreenState extends State<NoteScreen>
         audioPath: _audioPath,
         drawingPath: _drawingPath,
         folderId: _folderId,
+        reminderAt: _reminderAt,
       );
       await notesProvider.addNote(newNote);
+      savedId = newNote.id;
     }
+
+    await _syncReminder(savedId, title);
 
     setState(() => _saved = true);
     await Future.delayed(const Duration(milliseconds: 250));
@@ -311,6 +613,98 @@ class _NoteScreenState extends State<NoteScreen>
                       _isArchived = !_isArchived;
                     });
                     setStateSheet(() {});
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    _reminderAt != null
+                        ? Icons.notifications_active_rounded
+                        : Icons.notifications_none_rounded,
+                    color: _reminderAt != null
+                        ? const Color(0xFF7C5CBF)
+                        : Colors.white,
+                  ),
+                  title: const Text(
+                    'Rappel',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: _reminderAt != null
+                      ? Text(
+                          _formatReminder(_reminderAt!),
+                          style: const TextStyle(color: Colors.white70),
+                        )
+                      : null,
+                  trailing: _reminderAt != null
+                      ? IconButton(
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white54,
+                          ),
+                          onPressed: () {
+                            _clearReminder();
+                            setStateSheet(() {});
+                          },
+                        )
+                      : null,
+                  onTap: () async {
+                    await _pickReminder();
+                    setStateSheet(() {});
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.notification_add_rounded,
+                    color: Colors.white54,
+                  ),
+                  title: const Text(
+                    'Tester les notifications',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  subtitle: const Text(
+                    'Envoie une notification immédiate',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                  onTap: () async {
+                    final ok =
+                        await NotificationService.instance.showTestNow();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ok
+                              ? 'Notification envoyée — vérifie ta barre d\'état.'
+                              : 'Permission notifications refusée.',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.share_rounded,
+                    color: Colors.white,
+                  ),
+                  title: const Text(
+                    'Partager',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showShareSheet();
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.copy_rounded,
+                    color: Colors.white,
+                  ),
+                  title: const Text(
+                    'Copier le texte',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _copyNote();
                   },
                 ),
                 const SizedBox(height: 10),

@@ -43,6 +43,9 @@ class Note extends HiveObject {
   @HiveField(12, defaultValue: false)
   bool isPinned;
 
+  @HiveField(13)
+  DateTime? reminderAt;
+
   Note({
     required this.id,
     required this.title,
@@ -57,6 +60,7 @@ class Note extends HiveObject {
     this.folderId,
     this.audioPath,
     this.drawingPath,
+    this.reminderAt,
   });
 
   Note copyWith({
@@ -73,6 +77,7 @@ class Note extends HiveObject {
     String? folderId,
     String? audioPath,
     String? drawingPath,
+    Object? reminderAt = _sentinel,
   }) {
     return Note(
       id: id ?? this.id,
@@ -88,6 +93,11 @@ class Note extends HiveObject {
       folderId: folderId ?? this.folderId,
       audioPath: audioPath ?? this.audioPath,
       drawingPath: drawingPath ?? this.drawingPath,
+      reminderAt: identical(reminderAt, _sentinel)
+          ? this.reminderAt
+          : reminderAt as DateTime?,
     );
   }
 }
+
+const Object _sentinel = Object();

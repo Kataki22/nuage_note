@@ -30,13 +30,14 @@ class NoteAdapter extends TypeAdapter<Note> {
       folderId: fields[9] as String?,
       audioPath: fields[10] as String?,
       drawingPath: fields[11] as String?,
+      reminderAt: fields[13] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Note obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class NoteAdapter extends TypeAdapter<Note> {
       ..writeByte(11)
       ..write(obj.drawingPath)
       ..writeByte(12)
-      ..write(obj.isPinned);
+      ..write(obj.isPinned)
+      ..writeByte(13)
+      ..write(obj.reminderAt);
   }
 
   @override

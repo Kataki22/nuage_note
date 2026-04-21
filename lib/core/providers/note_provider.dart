@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:nuage_note/core/models/note.dart';
+import 'package:nuage_note/core/services/notification_service.dart';
+import 'package:nuage_note/core/services/widget_service.dart';
 import 'package:uuid/uuid.dart';
 
 enum SortMode { dateDesc, dateAsc, titleAsc, colorGroup }
@@ -31,6 +33,14 @@ class NotesProvider extends ChangeNotifier {
   Future<void> init() async {
     _box = await Hive.openBox<Note>('notes');
     notifyListeners();
+    _syncWidget();
+  }
+
+  Note? getById(String id) => _box?.get(id);
+
+  void _syncWidget() {
+    final all = _box?.values.toList() ?? const <Note>[];
+    WidgetService.sync(all);
   }
 
   // ─── Filtre combiné ───────────────────────────────────────────────
@@ -144,16 +154,20 @@ class NotesProvider extends ChangeNotifier {
   Future<void> addNote(Note note) async {
     await _box!.put(note.id, note);
     notifyListeners();
+    _syncWidget();
   }
 
   Future<void> updateNote(Note note) async {
     await _box!.put(note.id, note);
     notifyListeners();
+    _syncWidget();
   }
 
   Future<void> deleteNote(String id) async {
+    await NotificationService.instance.cancel(id);
     await _box!.delete(id);
     notifyListeners();
+    _syncWidget();
   }
 
   Future<void> toggleFavorite(String id) async {
@@ -164,6 +178,7 @@ class NotesProvider extends ChangeNotifier {
       note.copyWith(isFavorite: !note.isFavorite, updatedAt: DateTime.now()),
     );
     notifyListeners();
+    _syncWidget();
   }
 
   Future<void> toggleArchive(String id) async {
@@ -174,6 +189,7 @@ class NotesProvider extends ChangeNotifier {
       note.copyWith(isArchived: !note.isArchived, updatedAt: DateTime.now()),
     );
     notifyListeners();
+    _syncWidget();
   }
 
   Future<void> togglePinned(String id) async {
@@ -184,6 +200,7 @@ class NotesProvider extends ChangeNotifier {
       note.copyWith(isPinned: !note.isPinned, updatedAt: DateTime.now()),
     );
     notifyListeners();
+    _syncWidget();
   }
 
   String generateId() => _uuid.v4();

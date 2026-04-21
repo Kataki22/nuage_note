@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/note_widget_background"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- Header: title + add button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Nuage Note"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/widget_add_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/note_widget_add_bg"
+            android:padding="6dp"
+            android:src="@drawable/note_widget_add_icon"
+            android:contentDescription="Nouvelle note" />
+    </LinearLayout>
+
+    <!-- Pinned section header -->
+    <TextView
+        android:id="@+id/widget_pinned_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="4dp"
+        android:text="ÉPINGLÉES"
+        android:textColor="#FFD54F"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:visibility="gone" />
+
+    <!-- Pinned slot 1 -->
+    <LinearLayout
+        android:id="@+id/widget_pinned_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/note_widget_item_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="6dp"
+            android:src="@drawable/note_widget_pin_icon"
+            android:contentDescription="Épinglée" />
+
+        <TextView
+            android:id="@+id/widget_pinned_1_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Pinned slot 2 -->
+    <LinearLayout
+        android:id="@+id/widget_pinned_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/note_widget_item_bg"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="6dp"
+            android:src="@drawable/note_widget_pin_icon"
+            android:contentDescription="Épinglée" />
+
+        <TextView
+            android:id="@+id/widget_pinned_2_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- Recent section header -->
+    <TextView
+        android:id="@+id/widget_recent_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="4dp"
+        android:text="RÉCENTES"
+        android:textColor="#9F8FD9"
+        android:textSize="9sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:visibility="gone" />
+
+    <!-- Recent slot 1 -->
+    <TextView
+        android:id="@+id/widget_recent_1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/note_widget_item_bg"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:padding="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- Recent slot 2 -->
+    <TextView
+        android:id="@+id/widget_recent_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/note_widget_item_bg"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:padding="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- Recent slot 3 -->
+    <TextView
+        android:id="@+id/widget_recent_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/note_widget_item_bg"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:padding="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:text="Aucune note pour le moment"
+        android:textColor="#888888"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+</LinearLayout>

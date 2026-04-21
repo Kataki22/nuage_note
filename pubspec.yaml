@@ -53,6 +53,17 @@ dependencies:
   # UI
   flutter_colorpicker: ^1.1.0
 
+  # Partage / export
+  share_plus: ^10.1.4
+
+  # Rappels / notifications locales
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.10.0
+  flutter_timezone: ^4.1.0
+
+  # Widget écran d'accueil Android
+  home_widget: ^0.7.0
+
   cupertino_icons: ^1.0.8
   flutter_localizations:
     sdk: flutter
